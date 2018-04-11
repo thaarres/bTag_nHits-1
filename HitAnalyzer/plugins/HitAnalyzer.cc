@@ -450,23 +450,24 @@ void
       int motherID = false;
       for( unsigned int m=0; m<gp->numberOfMothers(); ++m ){
         motherID =  gp->mother(m)->pdgId();
-        if ( fabs(gp->mother(m)->pdgId())>500 && fabs(gp->mother(m)->pdgId())<600) {
+        if ( (fabs(gp->mother(m)->pdgId())>500 && fabs(gp->mother(m)->pdgId())<600) || (fabs(gp->mother(m)->pdgId())>5000 && fabs(gp->mother(m)->pdgId())<6000) ) {
           BMother = true;
-          break;
+	  if (BMother) break;
         }
       }
       
-      if (BMother && (fabs(gp->pdgId())>500 && fabs(gp->pdgId())<600)) continue;
+      //if (BMother && (fabs(gp->pdgId())>500 && fabs(gp->pdgId())<600)) continue;
 
       std::string idString = std::to_string(fabs(gp->pdgId()));
+      /*
       if ( BMother == true || (gp->status()<30 && gp->status()>20) || (fabs(gp->pdgId())>500 && fabs(gp->pdgId())<600) 
       || (idString.find("511") != std::string::npos)  || (idString.find("521") != std::string::npos)
       || (idString.find("513") != std::string::npos)  || (idString.find("523") != std::string::npos)
       || (idString.find("531") != std::string::npos)  || (idString.find("541") != std::string::npos)
       || (idString.find("533") != std::string::npos)  || (idString.find("543") != std::string::npos) 
       || (idString.find("551") != std::string::npos)  || (idString.find("553") != std::string::npos) 
-      || (idString.find("555") != std::string::npos)  || (idString.find("557") != std::string::npos) ){  
-	
+      || (idString.find("555") != std::string::npos)  || (idString.find("557") != std::string::npos) ){ */ 
+      if (true){
 	std::vector<const reco::Candidate*> genParticle_Daughters;
 	double decayvx_x = 0;
 	double decayvx_y = 0;
@@ -478,7 +479,7 @@ void
 	bool IdenticalDaughter = false;
 	unsigned int dau_identical = 0;
 	for (unsigned int dau=0; dau < gp->numberOfDaughters(); ++dau) {	//check if daughter identical to particle
-		if ((gp->daughter(dau)->pdgId() == gp->pdgId()) || ((fabs(gp->pdgId())>500 && fabs(gp->pdgId())<600) && (fabs(gp->daughter(dau)->pdgId())>500 && fabs(gp->daughter(dau)->pdgId())<600))) {
+		if ((gp->daughter(dau)->pdgId() == gp->pdgId()) || ((fabs(gp->pdgId())>500 && fabs(gp->pdgId())<600) && (fabs(gp->daughter(dau)->pdgId())>500 && fabs(gp->daughter(dau)->pdgId())<600)) || ((fabs(gp->pdgId())>5000 && fabs(gp->pdgId())<6000) && (fabs(gp->daughter(dau)->pdgId())>5000 && fabs(gp->daughter(dau)->pdgId())<6000))) {
 			IdenticalDaughter = true;
 			dau_identical = dau;
 			break;
@@ -495,7 +496,7 @@ void
 //		std::cout<<"Generation = "<<GenerationCounter<<std::endl;
 		IdenticalDaughter = false;
 		for (unsigned int dau=0; dau < tmp->numberOfDaughters(); ++dau) {
-			if ((tmp->pdgId() == tmp->daughter(dau)->pdgId()) || ((fabs(tmp->pdgId())>500 && fabs(tmp->pdgId())<600) && (fabs(tmp->daughter(dau)->pdgId())>500 && fabs(tmp->daughter(dau)->pdgId())<600))) {
+			if ((tmp->pdgId() == tmp->daughter(dau)->pdgId()) || ((fabs(tmp->pdgId())>500 && fabs(tmp->pdgId())<600) && (fabs(tmp->daughter(dau)->pdgId())>500 && fabs(tmp->daughter(dau)->pdgId())<600)) || ((fabs(tmp->pdgId())>5000 && fabs(tmp->pdgId())<6000) && (fabs(tmp->daughter(dau)->pdgId())>5000 && fabs(tmp->daughter(dau)->pdgId())<6000))) {
 				tmp = tmp->daughter(dau);
 				dau = 0;
 				IdenticalDaughter = true;
@@ -544,7 +545,7 @@ void
         double vx_phi = gp->vertex().Coordinates().Phi(); 
         double vx_r   = gp->vertex().Coordinates().R(); 
 
-        
+        /*
 	if ((fabs(gp->pdgId())>500 && fabs(gp->pdgId())<600) 
       || (idString.find("511") != std::string::npos)  || (idString.find("521") != std::string::npos)
       || (idString.find("513") != std::string::npos)  || (idString.find("523") != std::string::npos)
@@ -560,7 +561,7 @@ void
 	}
 	std::cout<<std::endl;
 	}
-
+	*/
         genParticle_pt  .push_back(genP.Pt());
         genParticle_eta .push_back(genP.Eta());
         genParticle_phi .push_back(genP.Phi());

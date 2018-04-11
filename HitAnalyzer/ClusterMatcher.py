@@ -96,6 +96,31 @@ def PlotTrajectory(vx,p,ax,T_max,res,col,lwidth,lstyle):
                 Tz.append(vx[2]+t*v_t[2])
         ax.plot(xs=Tx,ys=Ty,zs=Tz,color=col,linewidth=lwidth,linestyle=lstyle)#plots all the tracks
 
+def Initialize2DPlot(title, xlabel, ylabel, grid=False, tree=None):
+        '''initialize 3D-plot'''
+        fig = plt.figure(title)
+        fig.clf()
+        ax = Axes3D(fig)
+        ax.clear()
+        plt.title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        #ax.set_zlabel(zlabel)
+        #plot grid of modules for visual reference
+        if grid == True:
+                tree.GetEntry(0)
+                ax.scatter(tree.detUnit_X,tree.detUnit_Y,c='k',s=1,linewidths=0.1)
+        return ax
+
+def PlotTrajectory2D(vx,p,ax,T_max,res,col,lwidth,lstyle):
+        Tx,Ty,Tz=[],[],[]
+        v_t = normalize(np.array([p[0],p[1],p[2]]))
+        for t in np.linspace(0,T_max,res):
+                Tx.append(vx[0]+t*v_t[0])
+                Ty.append(vx[1]+t*v_t[1])
+                Tz.append(vx[2]+t*v_t[2])
+        ax.plot(xs=Tx,ys=Ty,color=col,linewidth=lwidth,linestyle=lstyle)#plots all the tracks
+
 
 #Main function:
 
@@ -256,12 +281,12 @@ if __name__ == '__main__':
 	
 	#file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/CMSSW_9_3_2/src/bTag_nHits/HitAnalyzer/TT_v5.root",'READ')
 	#file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/CMSSW_9_3_2/src/bTag_nHits/HitAnalyzer/TT_v6.root",'READ')
-	file = rt.TFile("/afs/cern.ch/user/m/msommerh/CMSSW_9_3_2/src/bTag/HitAnalyzer/flatTuple.root",'READ')
+	file = rt.TFile("flatTuple.root",'READ')
 
 	dR = 0.1 #DeltaR threshold for counting clusters
 	MomentumThreshold = 350
 
-	HitClusters =  ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=True, Plot=True, Save=False, dR_dist = False)
+	#HitClusters =  ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=True, Plot=True, Save=False, dR_dist = False)
 
 	#with open("HitClusterDR0.1onB-hadrons.pkl",) as f:	#take data from file instead of running entire function
 	#	HitClusters = pickle.load(f)
@@ -270,7 +295,57 @@ if __name__ == '__main__':
 	
 	tree = file.Get("demo/tree")
 	N = tree.GetEntries()
+	
+	ax = Initialize3DPlot('Particle Trajectories', 'x', 'y', 'z', grid=True, tree=tree)
+	tree.GetEntry(0)
+	X,Y,Z = [],[],[]
+	for nModule,lenModule in enumerate(tree.nClusters):
+		for nCluster in xrange(0,lenModule):
+			X.append(tree.cluster_globalx[nModule][nCluster])
+			Y.append(tree.cluster_globaly[nModule][nCluster])
+			Z.append(tree.cluster_globalz[nModule][nCluster])
 
+	ax.scatter(X,Y,Z,c='blue',s=9,linewidths=0.1)
+
+	for k in range(0,tree.nGenParticles):
+		print tree.genParticle_pdgId[k]
+		if abs(tree.genParticle_pdgId[k])<600 and abs(tree.genParticle_pdgId[k])>500:
+			color = 'green'
+			linestyle = '-'
+		else:
+			color = 'red'
+			linestyle = '--'
+		pVector = rt.TLorentzVector()
+	        pVector.SetPtEtaPhiM(tree.genParticle_pt[k],tree.genParticle_eta[k], \
+              	tree.genParticle_phi[k],tree.genParticle_mass[k])
+		v_p = normalize(np.array([pVector[0], pVector[1], pVector[2]]))
+	        phi = PolarPhi(v_p[0],v_p[1])
+		theta = Theta(v_p[0],v_p[1],v_p[2])
+		t_max = TrajectoryLength(theta,v_p)
+		PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,ax,t_max,50,color,1,linestyle)
+	plt.show()
+
+	'''	
+	nDU = 0
+	Rtot = 0
+	for unit in range(tree.nDetUnits):
+		if tree.detUnit_layer[unit] == 1:
+			nDU += 1
+			Rtot += np.sqrt(tree.detUnit_X[unit]**2 + tree.detUnit_Y[unit]**2)
+	meanR = Rtot/nDU
+	print meanR
+	'''
+	'''
+	for i in xrange(N):
+		tree.GetEntry(i)
+		for k in range(0,tree.nGenParticles):
+			R = np.sqrt(tree.genParticle_decayvx_x[k]**2 + tree.genParticle_decayvx_y[k]**2)
+			if abs(tree.genParticle_pdgId[k])<600 and abs(tree.genParticle_pdgId[k])>500 and R>3:
+				print "Event nr",i,"   particle nr",k, "   pdgId() =", tree.genParticle_pdgId[k],"   pt =", tree.genParticle_pt[k], "R =", R
+
+	'''
+
+	'''
 	hsv = plt.get_cmap('hsv')
 	color = hsv(np.linspace(0,1.0,12))
 	yLim = 30
@@ -288,19 +363,11 @@ if __name__ == '__main__':
 			ClustersY.append(cluster[2])
 			ClustersZ.append(cluster[3])
 	plt.plot(range(1,len(HitsPerLayer)),HitsPerLayer[1:],color='b')
-	print "ClustersX:", ClustersX
-	print "ClustersY:", ClustersY
-	print "ClustersZ:", ClustersZ
-	'''
-	for n,particle in enumerate(HitClusters):	
-		HitsPerLayer = np.zeros(5)
-	for cluster in particle:
-		HitsPerLayer[cluster[0][2]] +=1
-		nEvent, nParticle = particle[0][0][0],particle[0][0][1]   
-		tree.GetEntry(nEvent)
-		eta, phi, pt = tree.genParticle_eta[nParticle], tree.genParticle_phi[nParticle], tree.genParticle_pt[nParticle]
-		plt.plot(range(1,len(HitsPerLayer)),HitsPerLayer[1:],color=color[n],label=r'$\eta$ ='+str(round(eta,2))+r', $\phi$ ='+str(round(phi,2))+r', Pt ='+str(round(pt,2)))
-	'''
+	#print "ClustersX:", ClustersX
+	#print "ClustersY:", ClustersY
+	#print "ClustersZ:", ClustersZ
+
+
 	plt.plot([1,1],[0,yLim],'k:')
 	plt.plot([2,2],[0,yLim],'k:')
 	plt.plot([3,3],[0,yLim],'k:')
@@ -312,8 +379,8 @@ if __name__ == '__main__':
 	#plt.legend(loc=9,ncol=3, prop={'size':8})
 	plt.savefig("HitsPerLayer1B.png")
 	plt.show()
+	'''
 	
-
 
 
 
