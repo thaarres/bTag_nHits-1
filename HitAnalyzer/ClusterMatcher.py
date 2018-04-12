@@ -55,7 +55,7 @@ def DeltaR(theta1,theta2,phi1,phi2):
 
 def DeltaR_eta(eta1,eta2,phi1,phi2):
 	"""returns deltaR according to particle physics convention using eta"""
-	deta = Eta(theta1)-Eta(theta2)
+	deta = eta1 - eta2
 	dphi = AngleCorr(phi1-phi2,np.pi)
 	return np.sqrt(deta**2 + dphi**2)
 
@@ -71,7 +71,7 @@ def TrajectoryLength(theta,v_p):
 	else:
 		return 45/np.sqrt(v_p[0]**2+v_p[1]**2+v_p[2]**2)
 
-def Initialize3DPlot(title, xlabel, ylabel, zlabel, grid=False, tree=None):
+def Initialize3DPlot(title, xlabel, ylabel, zlabel, grid=None):
         '''initialize 3D-plot'''
         fig = plt.figure(title)
         fig.clf()
@@ -82,10 +82,28 @@ def Initialize3DPlot(title, xlabel, ylabel, zlabel, grid=False, tree=None):
         ax.set_ylabel(ylabel)
         ax.set_zlabel(zlabel)
         #plot grid of modules for visual reference
-        if grid == True:
-                tree.GetEntry(0)
-                ax.scatter(tree.detUnit_X,tree.detUnit_Y,tree.detUnit_Z,c='k',s=1,linewidths=0.1)
+        if grid != None:
+                ax.scatter(grid[0],grid[1],grid[2],c='k',s=1,linewidths=0.1)
         return ax
+
+def MakeGrid(file):
+	tree = file.Get("demo/tree")
+	N = tree.GetEntries()
+	DetUnits = []
+	for i in xrange(N):
+    		if i % 50 == 0: print "Working on event " ,i
+    		tree.GetEntry(i)
+		for DetUnit in zip(tree.detUnit_X,tree.detUnit_Y,tree.detUnit_Z):
+			if DetUnit not in DetUnits:
+				DetUnits.append(DetUnit)
+	X, Y, Z = [], [], []
+	for DetUnit in DetUnits:
+		X.append(DetUnit[0])
+		Y.append(DetUnit[1])
+		Z.append(DetUnit[2])
+	with open("Grid.pkl", 'w') as f:
+		pickle.dump([X,Y,Z], f)
+	return X, Y, Z
 
 def PlotTrajectory(vx,p,ax,T_max,res,col,lwidth,lstyle):
         Tx,Ty,Tz=[],[],[]
@@ -124,17 +142,20 @@ def PlotTrajectory2D(vx,p,ax,T_max,res,col,lwidth,lstyle):
 
 #Main function:
 
-def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, Save=False, dR_dist = False):
-	"""returns unique ID and coordinates of all pixel clusters that lie inside the dR-cone of a b-particle trajectory: optionally it returns also a 3D-plot
+def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, Axes=None, Save=False, dR_dist=False, EarlyBreak=0):
+	"""returns unique ID and coordinates of all pixel clusters that lie inside the dR-cone of a b-particle trajectory; optionally it returns also a 3D-plot
 		
 
 	Inputs:
 		file: 			full root TFile
 		dR: 			Delta R region around particle trajectory in which clusters should count as hit
 		Momentumthreshold:	momentum threshold for b-particles to be counted
+		HadronsNotQuarks:	if set as True, the algorithm will focus on B-hadrons instead of b-quarks
 		Plot:			if set as True, the function will return a 3D-plot
+		Axes:			pre-initialized 3D-plot axes. Only necessary if Plot==True
 		Save:			if set as True, the function will save the data to a .pkl file for later use
 		dR_dist:		if set as True, the function will return a histrogram showing the distribution of delta R between pixel clusters and the corresponding trajectory
+		EarlyBreak:		non zero integer which denotes the number of events after which the algorithm should stop
 
 	Outputs:
 		list of tuples where each contains a tuple with a uniqe identification followed by global cartesian coordinates:((nEvent,nParticle,nLayer,nModule,nCluster),x,y,z)"""
@@ -142,6 +163,8 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 	#color = ['b','g','r','c','m','y','k','w']
 	hsv = plt.get_cmap('hsv')
 	color = hsv(np.linspace(0,1.0,12))
+	c = 0 #initialize color index
+	res = 50 #trajectory resolution
 
 	# open tree file
 	tree = file.Get("demo/tree")
@@ -154,15 +177,9 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 		histL3 = rt.TH1D('DeltaR', 'DeltaR', 30, 0, dR)	
 		histL4 = rt.TH1D('DeltaR', 'DeltaR', 30, 0, dR)	
 		
-	if Plot == True:	
-		#initialize 3D-plot
-		ax = Initialize3DPlot('Particle Trajectories', 'x', 'y', 'z', grid=True, tree=tree)
-		c = 0 #initializing color index
-		res = 50 #number of points in trajectory
-
 	for i in xrange(N):
     		if i % 50 == 0: print "Working on event " ,i
-		if i > 10: break
+		if EarlyBreak > 0 and i>=EarlyBreak: break
     		tree.GetEntry(i)
     		for j in range(0,tree.nJets):
         		jVector = rt.TLorentzVector()
@@ -189,7 +206,7 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 						
 						if Plot == True:
 							t_max = TrajectoryLength(theta,v_p)
-							PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,ax,t_max,res,color[c],1,'--')
+							PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,Axes,t_max,res,color[c],1,'--')
 
                         			NearClusters = [] #list that will contain for each hit cluster: ((nEvent,nParticle,nModule,nCluster),x,y,z)
 						for nModule,lenModule in enumerate(tree.nClusters): #finding all clusters inside deltaR<dR
@@ -222,7 +239,7 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 								Y.append(entry[2])
 								Z.append(entry[3])
                         				if Plot == True:
-								ax.scatter(X,Y,Z,c=color[c],s=9,linewidths=0.1) #plots all the hit clusters
+								Axes.scatter(X,Y,Z,c=color[c],s=9,linewidths=0.1) #plots all the hit clusters
 								if c != len(color)-1:
                         						c += 1
                         					else:
@@ -242,15 +259,7 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 	if Save == True:
 		with open("HitClusterDR"+str(dR)+"on"+str(particleString)+".pkl", 'w') as f:
 			pickle.dump(HitClusters, f)
-	'''
-	c1 = rt.TCanvas('c1', 'c1', 600,600)
-	c1.SetTitle("B-Hadron Pt")
-	hist.GetXaxis().SetTitle('pt [GeV]')
-	hist.GetYaxis().SetTitle('#')
-	hist.GetYaxis().SetTitleOffset(1.5)
-	hist.Draw()
-	c1.SaveAs('B-hadron_pt.png')
-	'''
+	
 	if dR_dist == True:
 		c1 = rt.TCanvas('c1','c1',600,600)
 		c1.SetTitle('DeltaR distribution')
@@ -279,20 +288,25 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 
 if __name__ == '__main__':
 	
-	#file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/CMSSW_9_3_2/src/bTag_nHits/HitAnalyzer/TT_v5.root",'READ')
-	#file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/CMSSW_9_3_2/src/bTag_nHits/HitAnalyzer/TT_v6.root",'READ')
 	file = rt.TFile("flatTuple.root",'READ')
 
 	dR = 0.1 #DeltaR threshold for counting clusters
 	MomentumThreshold = 350
 
-	#HitClusters =  ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=True, Plot=True, Save=False, dR_dist = False)
+	with open("Grid.pkl",) as f:	#open coordinates of DetUnits for visual reference
+		Grid = pickle.load(f)
+
+	ax = Initialize3DPlot('Particle Trajectories', 'x', 'y', 'z', grid=Grid)
+	HitClusters =  ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=True, Plot=True, Axes=ax, Save=False, dR_dist = False, EarlyBreak=10)
 
 	#with open("HitClusterDR0.1onB-hadrons.pkl",) as f:	#take data from file instead of running entire function
 	#	HitClusters = pickle.load(f)
 	
 	#Count hits per layer for each particle
 	
+	'''
+	#Plot all clusters and all particles
+
 	tree = file.Get("demo/tree")
 	N = tree.GetEntries()
 	
@@ -324,28 +338,13 @@ if __name__ == '__main__':
 		t_max = TrajectoryLength(theta,v_p)
 		PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,ax,t_max,50,color,1,linestyle)
 	plt.show()
+	'''
 
-	'''	
-	nDU = 0
-	Rtot = 0
-	for unit in range(tree.nDetUnits):
-		if tree.detUnit_layer[unit] == 1:
-			nDU += 1
-			Rtot += np.sqrt(tree.detUnit_X[unit]**2 + tree.detUnit_Y[unit]**2)
-	meanR = Rtot/nDU
-	print meanR
-	'''
-	'''
-	for i in xrange(N):
-		tree.GetEntry(i)
-		for k in range(0,tree.nGenParticles):
-			R = np.sqrt(tree.genParticle_decayvx_x[k]**2 + tree.genParticle_decayvx_y[k]**2)
-			if abs(tree.genParticle_pdgId[k])<600 and abs(tree.genParticle_pdgId[k])>500 and R>3:
-				print "Event nr",i,"   particle nr",k, "   pdgId() =", tree.genParticle_pdgId[k],"   pt =", tree.genParticle_pt[k], "R =", R
 
 	'''
 
-	'''
+	#Count hits per layer for each particle
+	
 	hsv = plt.get_cmap('hsv')
 	color = hsv(np.linspace(0,1.0,12))
 	yLim = 30
