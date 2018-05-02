@@ -128,6 +128,12 @@ private:
   // std::vector<double>  jet_vx_phi ;
   // std::vector<double>  jet_vx_r   ;
   
+  std::vector<double>  PV_x ;
+  std::vector<double>  PV_y ;
+  std::vector<double>  PV_z ;
+  std::vector<double>  SV_x ;
+  std::vector<double>  SV_y ;
+  std::vector<double>  SV_z ;
   
   
   std::vector<double>  dr_jetGen;
@@ -247,13 +253,17 @@ HitAnalyzer::HitAnalyzer(const edm::ParameterSet& conf)
   // tree->Branch( "jet_pdgId"         , &jet_pdgId );
   tree->Branch( "jet_bTag"          , &jet_bTag );
   // tree->Branch( "jet_vx_x"  , &jet_vx_x   );
-  // tree->Branch( "jet_vx_y"  , &jet_vx_y   );
-  // tree->Branch( "jet_vx_z"  , &jet_vx_z   );
-  // tree->Branch( "jet_vx_eta", &jet_vx_eta );
-  // tree->Branch( "jet_vx_phi", &jet_vx_phi );
-  // tree->Branch( "jet_vx_r"  , &jet_vx_r   );
-  
-  
+//   tree->Branch( "jet_vx_y"  , &jet_vx_y   );
+//   tree->Branch( "jet_vx_z"  , &jet_vx_z   );
+//   tree->Branch( "jet_vx_eta", &jet_vx_eta );
+//   tree->Branch( "jet_vx_phi", &jet_vx_phi );
+//   tree->Branch( "jet_vx_r"  , &jet_vx_r   );
+  tree->Branch( "PV_x", &PV_x);
+  tree->Branch( "PV_y", &PV_y);
+  tree->Branch( "PV_z", &PV_z);
+  tree->Branch( "SV_x", &SV_x);
+  tree->Branch( "SV_y", &SV_y);
+  tree->Branch( "SV_z", &SV_z);
   
   // tree->Branch( "dr_jetGen"         , &dr_jetGen );
   
@@ -402,10 +412,23 @@ void
   Handle<reco::PFJetCollection                > ak4CHS   ; iEvent.getByToken( ak4CHStoken  , ak4CHS   );
   Handle<reco::GenParticleCollection          > genPs    ; iEvent.getByToken( genPtoken    , genPs    );
   Handle<reco::JetTagCollection               > CSVs     ; iEvent.getByToken( csv2Token    , CSVs     );
+  Handle<reco::VertexCollection               > PVs      ; iEvent.getByToken( pvToken      , PVs      );
   Handle<reco::VertexCollection               > SVs      ; iEvent.getByToken( svToken      , SVs      );
   Handle<reco::TrackCollection                > tracks   ; iEvent.getByToken( trackToken   , tracks   );
   const reco::JetTagCollection & bTags = *(CSVs.product()); 
   
+  // Loop over PVs
+  for ( reco::VertexCollection::const_iterator pv = PVs->begin(); pv != PVs->end(); ++pv ) {
+    PV_x.push_back(pv->x());
+    PV_y.push_back(pv->y());
+    PV_z.push_back(pv->z());
+  }
+  // Loop over SVs
+  for ( reco::VertexCollection::const_iterator sv = SVs->begin(); sv != SVs->end(); ++sv ) {
+    SV_x.push_back(sv->x());
+    SV_y.push_back(sv->y());
+    SV_z.push_back(sv->z());
+  }
  
   // Loop over jets
   for ( reco::PFJetCollection::const_iterator jet = ak4CHS->begin(); jet != ak4CHS->end(); ++jet ) {
@@ -430,16 +453,19 @@ void
       csv2 = bTags[i].second; 
     }
     jet_bTag.push_back(csv2);
+  
+    // jet_vx_x   .push_back(jet->vertex().Coordinates().X());
+ //    jet_vx_y   .push_back(jet->vertex().Coordinates().Y());
+ //    jet_vx_z   .push_back(jet->vertex().Coordinates().Z());
+ //    jet_vx_eta .push_back(jet->vertex().Coordinates().Eta());
+ //    jet_vx_phi .push_back(jet->vertex().Coordinates().Phi());
+ //    jet_vx_r   .push_back(jet->vertex().Coordinates().R());
+    
+    
   }
   nJets         = jet_pt.size();
   // jet_pdgId.push_back(pdgId);
-  // jet_vx_x   .push_back(jet->vertex().Coordinates().X());
-  // jet_vx_y   .push_back(jet->vertex().Coordinates().Y());
-  // jet_vx_z   .push_back(jet->vertex().Coordinates().Z());
-  // jet_vx_eta .push_back(jet->vertex().Coordinates().Eta());
-  // jet_vx_phi .push_back(jet->vertex().Coordinates().Phi());
-  // jet_vx_r   .push_back(jet->vertex().Coordinates().R());
-    
+  
 
     
     // Loop opver gen particles
@@ -789,12 +815,18 @@ void HitAnalyzer::reset( void ){
   jet_pdgId.clear();
   jet_bTag.clear();
   // jet_vx_x  .clear();
-  // jet_vx_y  .clear();
-  // jet_vx_z  .clear();
-  // jet_vx_eta.clear();
-  // jet_vx_phi.clear();
-  // jet_vx_r  .clear();
+//   jet_vx_y  .clear();
+//   jet_vx_z  .clear();
+//   jet_vx_eta.clear();
+//   jet_vx_phi.clear();
+//   jet_vx_r  .clear();
   dr_jetGen.clear();
+  PV_x .clear();
+  PV_y .clear();
+  PV_z .clear();
+  SV_x .clear();
+  SV_y .clear();
+  SV_z .clear();
   
   nGenParticles = 0;
   genParticle_pt.clear();

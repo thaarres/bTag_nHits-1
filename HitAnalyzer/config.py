@@ -43,7 +43,8 @@ process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
         # 'file:/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/CMSSW_9_2_1/src/btag_ntracks/TprimeBToTH_M-3000_Width-30p_LH_TuneCUETP8M2T4_14TeV-madgraph-pythia8.root'
         #'root://storage01.lcg.cscs.ch//pnfs/lcg.cscs.ch/cms/trivcat/store/user/thaarres/ZprimeBB/ZprimeBB_GEN_SIM_DIGI_RECO_v2/180319_095233/0000/B2G-RunIISpring16DR80-00005_148.root'
-    	'file:ZprimeBBbar_M2000_GENSIMDIGIRECO.root'
+      # 'file:ZprimeBBbar_M2000_GENSIMDIGIRECO.root'
+      'root://cms-xrd-global.cern.ch//store/relval/CMSSW_9_0_0/RelValQCD_FlatPt_15_3000HS_13/GEN-SIM-RECO/90X_upgrade2017_realistic_v20_HS-v1/00000/70EF9371-2E15-E711-9BB4-0025905A6066.root'
 	)
 )
 process.demo = cms.EDAnalyzer('HitAnalyzer',
