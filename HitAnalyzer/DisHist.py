@@ -138,19 +138,19 @@ def DiscriminatorHist(title,discriminator,Bdata,Backgrounddata,bins,ran,xlabel):
         legend.Draw()
         canvas.SaveAs('discriminants/'+title+'.png')
 
-def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=False, Abs=False, Save=False):
+def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=False, Abs=False, dR_check=False, Save=False):
         if Difference:
                 if Abs:
-                        title = "abs_L"+str(i)+"-L"+str(j)
+                        title = "abs_L"+str(i)+"-L"+str(j)+"_dR_"+str(dR)
                         xlabel = "|L"+str(i)+"-L"+str(j)+"|"
                         ran = (0,25)
                 else:
-                        title = "L"+str(i)+"-L"+str(j)
+                        title = "L"+str(i)+"-L"+str(j)+"_dR_"+str(dR)
                         xlabel = "L"+str(i)+"-L"+str(j)
                         ran = (-25,25)
                 bins = ran[1]-ran[0]
         else:
-                title = "L"+str(i)+"_L"+str(j)
+                title = "L"+str(i)+"_L"+str(j)+"_dR_"+str(dR)
                 xlabel = "L"+str(i)+"/L"+str(j)
         BG_zero_div = 0
         BG_else = 0
@@ -166,9 +166,12 @@ def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=Fals
                 HistBlist[n].SetLineColor(n+3)
                 for particle in Bdata[0]:
                         if Difference:
-                                L = Li_Lj_diff(i,j,particle)
+				if Abs:
+                                	L = abs(Li_Lj_diff(i,j,particle, dR, dR_check=dR_check))
+                        	else:
+                                	L = Li_Lj_diff(i,j,particle, dR, dR_check=dR_check)
                         else:
-                                L = Li_Lj_ratio(i,j,particle)
+                                L = Li_Lj_ratio(i,j,particle, dR, dR_check=dR_check)
                         B_else += 1
                         if L == False:
                                 B_zero_div += 1
@@ -180,11 +183,11 @@ def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=Fals
         for particle in Backgrounddata:
                 if Difference:
                         if Abs:
-                                L = abs(Li_Lj_diff(i,j,particle))
+                                L = abs(Li_Lj_diff(i,j,particle, dR, dR_check=dR_check))
                         else:
-                                L = Li_Lj_diff(i,j,particle)
+                                L = Li_Lj_diff(i,j,particle, dR, dR_check=dR_check)
                 else:
-                        L = Li_Lj_ratio(i,j,particle)
+                        L = Li_Lj_ratio(i,j,particle, dR, dR_check=dR_check)
                 BG_else += 1
                 if L == False:
                         BG_zero_div += 1
@@ -214,7 +217,7 @@ def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=Fals
                 Tfile = rt.TFile("histogram_files/"+title+"histograms.root","recreate")
                 for Hist in HistBlist: Hist.Write()
                 HistBackground.Write()
-                canvas.SaveAs('discriminants/'+title+'DR'+str(dR)+'.png')
+                canvas.SaveAs('discriminants/'+title+'.png')
                 #print 'saved as discriminants/'+title+'DR'+str(dR)+'.png'
         #sleep(10)
 
@@ -239,9 +242,10 @@ def Li_Lj_Hist2D(title,i,j,data,ran,dR,Save=False):
 		print 'saved as discriminants/L'+str(i)+'_L'+str(j)+'Hist_2D_DR'+str(dR)+title+'.png'
 	sleep(5)
 
-def Li_Lj_ratio(i,j,ParticleData):
+def Li_Lj_ratio(i,j,ParticleData, dR, dR_check=False):
         Li,Lj = 0,0
         for cluster in ParticleData:
+		if dR_check and cluster[0][8] >= dR: continue
                 if cluster[0][2] == i:
                         Li += 1
                 if cluster[0][2] == j:
@@ -251,9 +255,10 @@ def Li_Lj_ratio(i,j,ParticleData):
         else:
                 return False
 
-def Li_Lj_diff(i,j,ParticleData):
+def Li_Lj_diff(i,j,ParticleData, dR, dR_check=False):
         Li,Lj = 0,0
         for cluster in ParticleData:
+		if dR_check and cluster[0][8] >= dR: continue
                 if cluster[0][2] == i:
                         Li += 1
                 if cluster[0][2] == j:
@@ -422,7 +427,7 @@ def ROC_CutBased(title,signal_hist,background_hist,cutregion="above",resolution=
 			background_efficiency.append(1-background_hist.Integral(bin_ran[0],bin_cut)/background_hist.Integral(bin_ran[0],bin_ran[1])) 	
 	plt.plot(signal_efficiency,background_efficiency,'-',label=title)
 
-def Draw_ROC_curves(discriminants,Resolution=1000,Save=False):
+def Draw_ROC_curves(discriminants,Resolution=1000,Title='',Save=False):
 	fig1 = plt.figure("2TeV-signal")
 	plt.clf()
 	fig2 = plt.figure("4TeV-signal")
@@ -448,14 +453,14 @@ def Draw_ROC_curves(discriminants,Resolution=1000,Save=False):
 	plt.ylabel(r"1-$\epsilon$_background")
 	plt.legend(loc=3)
 	if Save:
-		fig1.savefig("ROC/ROC-curves_2TeV.png")
-		print "saved as ROC/ROC-curves_2TeV.png"
-		fig2.savefig("ROC/ROC-curves_4TeV.png")
-		print "saved as ROC/ROC-curves_4TeV.png"
+		fig1.savefig("ROC/ROC-curves_2TeV_"+Title+".png")
+		print "saved as ROC/ROC-curves_2TeV_"+Title+".png"
+		fig2.savefig("ROC/ROC-curves_4TeV_"+Title+".png")
+		print "saved as ROC/ROC-curves_4TeV_"+Title+".png"
 	plt.show()
 	
 
-def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False,BG=False, Plot=False, Axes=None, Save=False, dR_dist=False, LayerHist=False, EarlyBreak=0):
+def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False,BG=False, Plot=False, Axes=None, Save=False, dR_dist=False, LayerHist=False,LightVersion=False, EarlyBreak=0):
         """returns unique ID and coordinates of all pixel clusters that lie inside the dR-cone of a b-particle trajectory; optionally it returns also a 3D-plot
                 
 
@@ -493,15 +498,13 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False
                 histL3 = rt.TH1D('Clusters(dR) - '+title, 'Clusters(dR) - '+title, 50, 0, dR)
                 histL4 = rt.TH1D('Clusters(dR) - '+title, 'Clusters(dR) - '+title, 50, 0, dR)
 
-        cl_x, cl_y, dvx_x, dvx_y = [],[],[],[]
-
         for i in xrange(N):
                 if i % 50 == 0: print "Working on event " ,i
                 if EarlyBreak > 0 and i>=EarlyBreak: break
 		if Save and i != 0 and i%10000==0:
                 	with open("HitClusterDR"+str(dR)+"on"+title+".pkl", 'w') as f:
                         	pickle.dump(HitClusters, f)
-
+			print "saved as HitClusterDR"+str(dR)+"on"+title+".pkl",
                 tree.GetEntry(i)
                 for j in range(0,tree.nJets):
                         jVector = rt.TLorentzVector()
@@ -524,8 +527,6 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False
                                         pVector.SetPtEtaPhiM(tree.genParticle_pt[k],tree.genParticle_eta[k], \
                                                 tree.genParticle_phi[k],tree.genParticle_mass[k])
                                         delR = jVector.DeltaR(pVector)
-                                        #if delR < 0.3:
-                                        #       hist.Fill(tree.genParticle_pt[k])                       
                                         if delR < 0.3 and tree.genParticle_pt[k] > MomentumThreshold: #momentum threshold
                                                 v_p = normalize(np.array([pVector[0], pVector[1], pVector[2]]))
                                                 phi = PolarPhi(v_p[0],v_p[1])
@@ -540,9 +541,6 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False
 						
                                                 previous_ids.append((tree.genParticle_pdgId[k],delR))
 
-                                                #dvxHist.Fill(tree.genParticle_decayvx_x[k],tree.genParticle_decayvx_y[k])
-                                                dvx_x.append(tree.genParticle_decayvx_x[k])
-                                                dvx_y.append(tree.genParticle_decayvx_y[k])
                                                 if Plot == True:
                                                         t_max = TrajectoryLength(theta,v_p)
                                                         PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,Axes,t_max,res,color[c],1,'--')
@@ -555,11 +553,10 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False
                                                                         tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k])
                                                                 DR = DeltaR(theta,ClusterTheta,phi,ClusterPhi)
                                                                 if DR<dR:
-                                                                        NearClusters.append(((i,k,tree.detUnit_layer[nModule],nModule,nCluster,tree.genParticle_pt[k],tree.genParticle_pdgId[k],tree.genParticle_decayvx_r[k]),tree.cluster_globalx[nModule][nCluster],\
-                                                                        tree.cluster_globaly[nModule][nCluster],tree.cluster_globalz[nModule][nCluster]))
-                                                                        #clHist.Fill(tree.cluster_globalx[nModule][nCluster],tree.cluster_globaly[nModule][nCluster])   
-                                                                        cl_x.append(tree.cluster_globalx[nModule][nCluster])
-                                                                        cl_y.append(tree.cluster_globaly[nModule][nCluster])
+									if LightVersion:
+										NearClusters.append(((i,k,tree.detUnit_layer[nModule],nModule,nCluster,tree.genParticle_pt[k],tree.genParticle_pdgId[k],tree.genParticle_decayvx_r[k],DR),''))
+ 									else:	
+                                                                        	NearClusters.append(((i,k,tree.detUnit_layer[nModule],nModule,nCluster,tree.genParticle_pt[k],tree.genParticle_pdgId[k],tree.genParticle_decayvx_r[k],DR),tree.cluster_globalx[nModule][nCluster],tree.cluster_globaly[nModule][nCluster],tree.cluster_globalz[nModule][nCluster]))
 
                                                                         if dR_dist == True:
                                                                                 if tree.detUnit_layer[nModule] == 1:
@@ -584,12 +581,13 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False
                                                         break 
                                                 else:
                                                         HitClusters.append(NearClusters) #summarizing the hit cluster ID for every event
-                                                        X,Y,Z=[],[],[]
-                                                        for entry in NearClusters:
-                                                                X.append(entry[1])
-                                                                Y.append(entry[2])
-                                                                Z.append(entry[3])
                                                         if Plot == True:
+								X,Y,Z=[],[],[]
+								for entry in NearClusters:
+                                                                	X.append(entry[1])
+                                                                	Y.append(entry[2])
+                                                                	Z.append(entry[3])
+
                                                                 Axes.scatter(X,Y,Z,c=color[c],s=9,linewidths=0.1) #plots all the hit clusters
                                                                 if c != len(color)-1:
                                                                         c += 1
@@ -655,27 +653,7 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, HadronsNotQuarks=False
                 if Save: 
 			fig2.savefig('HitsPerLayer'+title+'.png')
 			print 'saved as HitsPerLayer'+title+'.png'
-                #plt.show()
-        '''
-        tClusterDR0.05onB-hadrons.pklfig3, ax3 = plt.subplots(1,2,figsize=(12,5))
-        #fig.suptitle(' ')
-        ax3[0].hist2d(dvx_x,dvx_y, bins=50,range=[[-20,20],[-20,20]])
-        ax3[0].set_title('Decay Vertices')
-        ax3[0].set_ylabel('y [cm]')
-        ax3[0].set_xlabel('x [cm]')
-        h = ax3[1].hist2d(cl_x,cl_y, bins=50,range=[[-20,20],[-20,20]])
-        ax3[1].set_title('Hit Clusters')
-        ax3[1].set_ylabel('y [cm]')
-        ax3[1].set_xlabel('x [cm]')
-        cbar_ax = fig3.add_axes([0.85,0.15,0.05,0.7])
-        cbar = fig3.colorbar(h[3],cax=cbar_ax,ticks = [np.min(h[0]),np.max(h[0])])
-        cbar.ax.set_yticklabels(['min','max'])
-        plt.tight_layout(pad=2.0,w_pad=0.5,h_pad=0.5)
-        fig3.subplots_adjust(right=0.8)
-        fig3.savefig('decayvx-clusters.png')
-        plt.show()
-        '''
-        return HitClusters
+	return HitClusters
 
 
 
@@ -683,7 +661,7 @@ if __name__ == '__main__':
 
 	#select global parameters
 
-        dR = 0.1 #DeltaR threshold for counting clusters
+        #dR = 0.16 #DeltaR threshold for counting clusters
         MomentumThresholdBackground = 350
 	MomentumThresholdB = 350
 
@@ -703,16 +681,16 @@ if __name__ == '__main__':
 	#with open("NewHitClusterDR0.04onbackground_particles.pkl",) as f:   
         #	Backgrounddata = pickle.load(f)
 	
-	print "opening file HitClusterDR0.1on2TeV-Signal.pkl"
-	with open("HitClusterDR0.1on2TeV-Signal.pkl",) as f:   
+	print "opening file HitClusterDR0.16on2TeV-Signal.pkl"
+	with open("HitClusterDR0.16on2TeV-Signal.pkl",) as f:   
                 Signal1 = pickle.load(f)
 
-	print "opening file HitClusterDR0.1on4TeV-Signal.pkl" 	
-	with open("HitClusterDR0.1on4TeV-Signal.pkl",) as f:   
+	print "opening file HitClusterDR0.16on4TeV-Signal.pkl" 	
+	with open("HitClusterDR0.16on4TeV-Signal.pkl",) as f:   
                 Signal2 = pickle.load(f)
 
-	print "opening file HitClusterDR0.1onBackground.pkl"
-	with open("HitClusterDR0.1onBackground.pkl",) as f: 
+	print "opening file HitClusterDR0.16onBG0.pkl"
+	with open("HitClusterDR0.16onBG0.pkl",) as f: 
                Background = pickle.load(f)
 
 	'''
@@ -731,45 +709,73 @@ if __name__ == '__main__':
 
 	#SeparateLayerHist([(Signal1,'2Tev-signal'),(Signal2,'4Tev-signal'),(Background,'Background')], (0,30), dR, minPT=0, Save=True)
 
-         
+        ''' 
 	#select file paths	
 
 	SignalFile1 = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/ZprimeBBbar_M2000_GENSIMDIGIRECO.root"
 	SignalFile2 = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/ZprimeBBbar_M4000_GENSIMDIGIRECO.root"
-	#Background = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8.root"
+	Background = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8.root"
 	#Background = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/QCD_noPU_3kEv.root"
-	
+	'''	
 	#additional Background files
 
-	Additional_Background = ['root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_10.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_13.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_15.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_19.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_20.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_25.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_27.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_2.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_33.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_35.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_37.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_39.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_3.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_41.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_4.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_7.root',
-	'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_8.root']
-	
+	Additional_Background = ['root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_1.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_10.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_11.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_12.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_13.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_15.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_16.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_17.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_19.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_2.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_20.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_21.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_22.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_23.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_24.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_25.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_26.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_27.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_29.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_3.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_31.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_32.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_33.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_34.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_35.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_36.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_37.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_38.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_39.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_4.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_40.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_41.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_42.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_43.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_45.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_47.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_5.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_6.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_7.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_8.root',
+'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_QCD_noPU/180430_105754/0000/flatTuple_9.root']
 	
 	#pre-process data
 
-	#Bdata1 =  ClusterMatch('2TeV-Signal', SignalFile1, dR, MomentumThresholdB, HadronsNotQuarks=True, Plot=False, Axes=None, Save=True, dR_dist = True, LayerHist=False, EarlyBreak=0)
-	#Bdata2 =  ClusterMatch('4TeV-Signal', SignalFile2, dR, MomentumThresholdB, HadronsNotQuarks=True, Plot=False, Axes=None, Save=True, dR_dist = True, LayerHist=False, EarlyBreak=0)
-	#Backgrounddata = ClusterMatch('Background', Background, dR, MomentumThresholdBackground, HadronsNotQuarks=True, BG=True, Plot=False, Axes=None, Save=False, dR_dist = True, LayerHist=False, EarlyBreak=20000)
-	
-	#for n,entry in enumerate(Additional_Background):
-	#	 ClusterMatch('BG'+str(n), entry, dR, MomentumThresholdBackground, HadronsNotQuarks=True, BG=True, Plot=False, Axes=None, Save=True, dR_dist = False, LayerHist=False, EarlyBreak=0)
+	#Bdata1 =  ClusterMatch('2TeV-Signal', SignalFile1, dR, MomentumThresholdB, HadronsNotQuarks=True, Plot=False, Axes=None, Save=True, dR_dist = False, LayerHist=False, EarlyBreak=0)
+	#Bdata2 =  ClusterMatch('4TeV-Signal', SignalFile2, dR, MomentumThresholdB, HadronsNotQuarks=True, Plot=False, Axes=None, Save=True, dR_dist = False, LayerHist=False, EarlyBreak=0)
+	#Backgrounddata = ClusterMatch('Background', Background, dR, MomentumThresholdBackground, HadronsNotQuarks=True, BG=True, Plot=False, Axes=None, Save=True, dR_dist = False, LayerHist=False, EarlyBreak=180000)
 	'''
-
+	dR = 0.16
+	#need to get GRID-permission first!!!
+	for n,entry in enumerate(Additional_Background):
+		try:
+			ClusterMatch('BG'+str(n), entry, dR, MomentumThresholdBackground, HadronsNotQuarks=True, BG=True, Plot=False, Axes=None, Save=True, dR_dist = False, LayerHist=False, LightVersion=True, EarlyBreak=0)
+		except:
+			continue
+	'''
+	'''
 	#HugeBackground = ClusterMatch('Background', Additional_Background[0], dR, MomentumThresholdBackground, HadronsNotQuarks=True, BG=True, Plot=True, Axes=ax, Save=False, dR_dist = False, LayerHist=False, EarlyBreak=500)
 	
 	
@@ -794,19 +800,37 @@ if __name__ == '__main__':
 	Li_Lj_Hist2D('background',2,4,Background,(0,35),dR,Save=True)
 	Li_Lj_Hist2D('background',3,4,Background,(0,35),dR,Save=True)
 	'''	
-	
+	'''
 	#Plot 1D-Histogram for different combinations of Li,Lj
-
+	
 	Li_Lj_Hist1D(2, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR, Save=True)
 	Li_Lj_Hist1D(3, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR, Save=True)
 	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR, Save=True)
 	Li_Lj_Hist1D(3, 2, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR, Save=True)
 	Li_Lj_Hist1D(4, 2, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR, Save=True)
 	Li_Lj_Hist1D(4, 3, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR, Save=True)
+	'''
 	
+	#Plot 1D-Histogram for L4_L1 and different dR
 	
-	hist_files = ['L2_L1','L3_L1','L4_L1','L3_L2','L4_L2','L4_L3']
-	Draw_ROC_curves(hist_files, Resolution = 50000,Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.01,Difference=True, Abs=False, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.02,Difference=True, Abs=False, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.04,Difference=True, Abs=False, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.08,Difference=True, Abs=False, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.16,Difference=True, Abs=False, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.01,Difference=True, Abs=True, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.02,Difference=True, Abs=True, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.04,Difference=True, Abs=True, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.08,Difference=True, Abs=True, dR_check=True, Save=True)
+	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.16,Difference=True, Abs=True, dR_check=True, Save=True)
+
+
+	#hist_files = ['L2_L1','L3_L1','L4_L1','L3_L2','L4_L2','L4_L3']
+	#hist_files = ['L4_L1_dR_0.01', 'L4_L1_dR_0.02', 'L4_L1_dR_0.04', 'L4_L1_dR_0.08', 'L4_L1_dR_0.16'] 
+	hist_files = ['L4-L1_dR_0.01', 'L4-L1_dR_0.02', 'L4-L1_dR_0.04', 'L4-L1_dR_0.08', 'L4-L1_dR_0.16'] 
+	Draw_ROC_curves(hist_files, Resolution = 50000,Title='L4-L1',Save=True)
+	hist_files = ['abs_L4-L1_dR_0.01', 'abs_L4-L1_dR_0.02', 'abs_L4-L1_dR_0.04', 'abs_L4-L1_dR_0.08', 'abs_L4-L1_dR_0.16'] 
+	Draw_ROC_curves(hist_files, Resolution = 50000,Title='abs_L4-L1',Save=True)
 
 
 	#print "opening files"
